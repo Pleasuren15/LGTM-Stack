@@ -1,5 +1,6 @@
 using Serilog;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
@@ -12,6 +13,10 @@ builder.Host.UseSerilog((context, configuration) =>
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddHttpClient();
+
+// Create ActivitySource for custom traces
+var activitySource = new ActivitySource("LGTM.Stack");
 
 builder.Services.AddOpenTelemetry()
     .WithMetrics(metrics =>
@@ -20,6 +25,18 @@ builder.Services.AddOpenTelemetry()
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddPrometheusExporter();
+    })
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddSource("LGTM.Stack")
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri("http://localhost:4317");
+                options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+            });
     });
 
 var app = builder.Build();
@@ -109,6 +126,42 @@ app.MapGet("/force-logs", () =>
     });
 })
 .WithName("ForceLogs");
+
+app.MapGet("/trace-test", async (HttpClient httpClient) => 
+{
+    using var activity = activitySource.StartActivity("TraceTest");
+    activity?.SetTag("test.type", "manual");
+    activity?.SetTag("endpoint", "trace-test");
+    
+    Log.Information("Starting trace test with activity ID: {ActivityId}", activity?.Id);
+    
+    // Make an HTTP call to generate child spans
+    try 
+    {
+        var response = await httpClient.GetAsync("https://api.github.com/zen");
+        var content = await response.Content.ReadAsStringAsync();
+        
+        activity?.SetTag("http.response_size", content.Length);
+        activity?.SetStatus(ActivityStatusCode.Ok);
+        
+        Log.Information("Trace test completed successfully");
+        
+        return Results.Ok(new { 
+            message = "Trace test completed",
+            traceId = activity?.TraceId.ToString(),
+            spanId = activity?.SpanId.ToString(),
+            timestamp = DateTime.UtcNow,
+            instruction = "Check your Grafana Tempo for traces"
+        });
+    }
+    catch (Exception ex)
+    {
+        activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+        Log.Error(ex, "Error during trace test");
+        throw;
+    }
+})
+.WithName("TraceTest");
 
 // Auto-open browser to Swagger UI
 var urls = app.Urls;

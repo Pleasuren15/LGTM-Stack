@@ -27,13 +27,29 @@ services:
         cat <<EOF > /etc/grafana/provisioning/datasources/ds.yaml
         apiVersion: 1
         datasources:
-        - name: Loki
+        - name: lgtm-loki
           type: loki
           access: proxy 
           orgId: 1
-          url: http://loki:3100
+          url: http://host.docker.internal:3100
           basicAuth: false
           isDefault: true
+          version: 1
+          editable: false
+        - name: lgtm-tempo
+          type: tempo
+          access: proxy
+          orgId: 1
+          url: http://host.docker.internal:3200
+          basicAuth: false
+          version: 1
+          editable: false
+        - name: lgtm-prometheus
+          type: prometheus
+          access: proxy
+          orgId: 1
+          url: http://host.docker.internal:9090
+          basicAuth: false
           version: 1
           editable: false
         EOF
@@ -63,8 +79,10 @@ services:
       - ./lgtm-config/tempo.yaml:/etc/tempo.yaml
       - ./tempo-data:/var/tempo
     ports:
-      - "3200" # tempo
-      - "4317" # otlp grpc
+      - "3200:3200" # tempo
+      - "4317:4317" # otlp grpc
+    networks:
+      - loki
 
   lgtm-prometheus:
     image: prom/prometheus:latest
@@ -77,3 +95,5 @@ services:
       - ./lgtm-config/prometheus.yaml:/etc/prometheus.yaml
     ports:
       - "9090:9090"
+    networks:
+      - loki

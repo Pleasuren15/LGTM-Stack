@@ -3,7 +3,13 @@
     "allow": [
       "Bash(cd /mnt/c/Dev/Learning/LGTM-Stack/LGTM.Stack)",
       "Bash(dotnet build)",
-      "Bash(curl -s http://localhost:3100/ready)"
+      "Bash(curl -s http://localhost:3100/ready)",
+      "Bash(curl -s \"http://localhost:3100/loki/api/v1/query?query={app=\"\"lgtm-stack\"\"}\")",
+      "Bash(curl -s \"http://localhost:3100/loki/api/v1/labels\")",
+      "Bash(dotnet build LGTM.Stack/LGTM.Stack.csproj)",
+      "Bash(docker compose -f docker-compose.monitoring.yml down)",
+      "Bash(docker compose -f docker-compose.monitoring.yml up -d)",
+      "Bash(docker logs lgtm-stack-lgtm-tempo-1 --tail 10)"
     ],
     "deny": []
   }
