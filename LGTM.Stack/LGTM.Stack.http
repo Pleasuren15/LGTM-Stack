@@ -1,0 +1,6 @@
+@LGTM.Stack_HostAddress = http://localhost:5207
+
+GET {{LGTM.Stack_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
