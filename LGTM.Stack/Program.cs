@@ -39,24 +39,21 @@ app.MapGet("/", () =>
     Log.Information("Root endpoint accessed");
     return "Hello World! Check your Grafana for logs and metrics.";
 })
-.WithName("GetRoot")
-.WithOpenApi();
+.WithName("GetRoot");
 
 app.MapGet("/health", () => 
 {
     Log.Information("Health check requested");
     return Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow });
 })
-.WithName("GetHealth")
-.WithOpenApi();
+.WithName("GetHealth");
 
 app.MapGet("/error", () => 
 {
     Log.Error("Error endpoint accessed - simulating an error");
     throw new InvalidOperationException("This is a test error for logging");
 })
-.WithName("GetError")
-.WithOpenApi();
+.WithName("GetError");
 
 // Auto-open browser to Swagger UI
 var urls = app.Urls;
