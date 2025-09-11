@@ -24,16 +24,16 @@ services:
       - ./config/grafana-provisioning-datasources.yaml:/etc/grafana/provisioning/datasources/provisioning-datasources.yaml:ro
       # Explicitly list the dashboards we want to show in the demo. We intentionally exclude dashboards that require
       # Kubernetes metrics (eg. resources or networking) and other services not available in the demo (eg. Grafana Loki).
-      - ../../../../../operations/mimir-mixin-compiled/dashboards/mimir-alertmanager.json:/var/lib/grafana/dashboards/mimir-alertmanager.json:ro
-      - ../../../../../operations/mimir-mixin-compiled/dashboards/mimir-compactor.json:/var/lib/grafana/dashboards/mimir-compactor.json:ro
-      - ../../../../../operations/mimir-mixin-compiled/dashboards/mimir-object-store.json:/var/lib/grafana/dashboards/mimir-object-store.json:ro
-      - ../../../../../operations/mimir-mixin-compiled/dashboards/mimir-overrides.json:/var/lib/grafana/dashboards/mimir-overrides.json:ro
-      - ../../../../../operations/mimir-mixin-compiled/dashboards/mimir-queries.json:/var/lib/grafana/dashboards/mimir-queries.json:ro
-      - ../../../../../operations/mimir-mixin-compiled/dashboards/mimir-reads.json:/var/lib/grafana/dashboards/mimir-reads.json:ro
-      - ../../../../../operations/mimir-mixin-compiled/dashboards/mimir-ruler.json:/var/lib/grafana/dashboards/mimir-ruler.json:ro
-      - ../../../../../operations/mimir-mixin-compiled/dashboards/mimir-tenants.json:/var/lib/grafana/dashboards/mimir-tenants.json:ro
-      - ../../../../../operations/mimir-mixin-compiled/dashboards/mimir-top-tenants.json:/var/lib/grafana/dashboards/mimir-top-tenants.json:ro
-      - ../../../../../operations/mimir-mixin-compiled/dashboards/mimir-writes.json:/var/lib/grafana/dashboards/mimir-writes.json:ro
+      - ./lgtm-config-mimir/dashboards/mimir-alertmanager.json:/var/lib/grafana/dashboards/mimir-alertmanager.json:ro
+      - ./lgtm-config-mimir/dashboards/mimir-compactor.json:/var/lib/grafana/dashboards/mimir-compactor.json:ro
+      - ./lgtm-config-mimir/dashboards/mimir-object-store.json:/var/lib/grafana/dashboards/mimir-object-store.json:ro
+      - ./lgtm-config-mimir/dashboards/mimir-overrides.json:/var/lib/grafana/dashboards/mimir-overrides.json:ro
+      - ./lgtm-config-mimir/dashboards/mimir-queries.json:/var/lib/grafana/dashboards/mimir-queries.json:ro
+      - ./lgtm-config-mimir/dashboards/mimir-reads.json:/var/lib/grafana/dashboards/mimir-reads.json:ro
+      - ./lgtm-config-mimir/dashboards/mimir-ruler.json:/var/lib/grafana/dashboards/mimir-ruler.json:ro
+      - ./lgtm-config-mimir/dashboards/mimir-tenants.json:/var/lib/grafana/dashboards/mimir-tenants.json:ro
+      - ./lgtm-config-mimir/dashboards/mimir-top-tenants.json:/var/lib/grafana/dashboards/mimir-top-tenants.json:ro
+      - ./lgtm-config-mimir/dashboards/mimir-writes.json:/var/lib/grafana/dashboards/mimir-writes.json:ro
     ports:
       - 9000:3000
 
