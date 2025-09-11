@@ -1,5 +1,7 @@
 using Serilog;
 using OpenTelemetry.Metrics;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +10,9 @@ builder.Host.UseSerilog((context, configuration) =>
     configuration.ReadFrom.Configuration(context.Configuration));
 
 // Add services to the container.
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 builder.Services.AddOpenTelemetry()
     .WithMetrics(metrics =>
     {
@@ -20,6 +25,9 @@ builder.Services.AddOpenTelemetry()
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+app.UseSwagger();
+app.UseSwaggerUI();
+
 app.UseHttpsRedirection();
 
 // Map Prometheus metrics endpoint
@@ -30,18 +38,54 @@ app.MapGet("/", () =>
 {
     Log.Information("Root endpoint accessed");
     return "Hello World! Check your Grafana for logs and metrics.";
-});
+})
+.WithName("GetRoot")
+.WithOpenApi();
 
 app.MapGet("/health", () => 
 {
     Log.Information("Health check requested");
     return Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow });
-});
+})
+.WithName("GetHealth")
+.WithOpenApi();
 
 app.MapGet("/error", () => 
 {
     Log.Error("Error endpoint accessed - simulating an error");
     throw new InvalidOperationException("This is a test error for logging");
+})
+.WithName("GetError")
+.WithOpenApi();
+
+// Auto-open browser to Swagger UI
+var urls = app.Urls;
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    var url = urls.FirstOrDefault() ?? "https://localhost:5001";
+    var swaggerUrl = $"{url}/swagger";
+    
+    Log.Information("Opening browser to Swagger UI at {SwaggerUrl}", swaggerUrl);
+    
+    try
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            Process.Start(new ProcessStartInfo("cmd", $"/c start {swaggerUrl}") { CreateNoWindow = true });
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            Process.Start("xdg-open", swaggerUrl);
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            Process.Start("open", swaggerUrl);
+        }
+    }
+    catch (Exception ex)
+    {
+        Log.Warning("Could not auto-open browser: {Error}", ex.Message);
+    }
 });
 
 await app.RunAsync();
