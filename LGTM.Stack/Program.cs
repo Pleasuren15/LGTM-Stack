@@ -94,6 +94,22 @@ app.MapGet("/loki-test", async () =>
 })
 .WithName("LokiTest");
 
+app.MapGet("/force-logs", () => 
+{
+    LGTM.Stack.TestLogging.TestDirectLokiLogging();
+    
+    Log.Information("Forced log test completed at {Timestamp}", DateTime.UtcNow);
+    Log.Warning("This is a warning from the main application");
+    Log.Error("This is an error from the main application");
+    
+    return Results.Ok(new { 
+        message = "Direct logging test completed",
+        timestamp = DateTime.UtcNow,
+        instruction = "Check your Grafana Loki for logs with app=lgtm-stack-test and app=lgtm-stack labels"
+    });
+})
+.WithName("ForceLogs");
+
 // Auto-open browser to Swagger UI
 var urls = app.Urls;
 app.Lifetime.ApplicationStarted.Register(() =>
