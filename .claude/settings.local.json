@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /mnt/c/Dev/Learning/LGTM-Stack/LGTM.Stack)",
+      "Bash(dotnet build)"
+    ],
+    "deny": []
+  }
+}
