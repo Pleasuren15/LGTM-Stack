@@ -1,0 +1,7 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/LGTM.Stack/.vs/LGTM.Stack
+/LGTM.Stack/bin/Debug/net9.0
+/LGTM.Stack/obj
