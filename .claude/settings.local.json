@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(cd /mnt/c/Dev/Learning/LGTM-Stack/LGTM.Stack)",
-      "Bash(dotnet build)"
+      "Bash(dotnet build)",
+      "Bash(curl -s http://localhost:3100/ready)"
     ],
     "deny": []
   }

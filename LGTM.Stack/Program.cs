@@ -55,6 +55,45 @@ app.MapGet("/error", () =>
 })
 .WithName("GetError");
 
+app.MapGet("/test-logs", () => 
+{
+    Log.Information("Test log entry - Information level");
+    Log.Warning("Test log entry - Warning level");
+    Log.Error("Test log entry - Error level");
+    
+    return Results.Ok(new { 
+        message = "Test logs generated", 
+        timestamp = DateTime.UtcNow,
+        levels = new[] { "Information", "Warning", "Error" }
+    });
+})
+.WithName("TestLogs");
+
+app.MapGet("/loki-test", async () => 
+{
+    Log.Information("Testing direct Loki connectivity from application");
+    
+    using var client = new HttpClient();
+    try 
+    {
+        var response = await client.GetAsync("http://localhost:3100/ready");
+        var status = response.IsSuccessStatusCode ? "accessible" : "not accessible";
+        
+        Log.Information("Loki status check: {Status}", status);
+        
+        return Results.Ok(new { 
+            lokiStatus = status,
+            timestamp = DateTime.UtcNow 
+        });
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Failed to connect to Loki");
+        return Results.Problem("Failed to connect to Loki");
+    }
+})
+.WithName("LokiTest");
+
 // Auto-open browser to Swagger UI
 var urls = app.Urls;
 app.Lifetime.ApplicationStarted.Register(() =>
