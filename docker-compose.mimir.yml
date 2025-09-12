@@ -20,8 +20,8 @@ services:
       - GF_LOG_MODE=console
       - GF_LOG_LEVEL=critical
     volumes:
-      - ./lgtm-config-mimir/config/grafana-provisioning-dashboards.yaml:/etc/grafana/provisioning/dashboards/provisioning-dashboards.yaml:ro
-      - ./lgtm-config-mimir/config/grafana-provisioning-datasources.yaml:/etc/grafana/provisioning/datasources/provisioning-datasources.yaml:ro
+      - ./lgtm-config-mimir/grafana-provisioning-dashboards.yaml:/etc/grafana/provisioning/dashboards/provisioning-dashboards.yaml:ro
+      - ./lgtm-config-mimir/grafana-provisioning-datasources.yaml:/etc/grafana/provisioning/datasources/provisioning-datasources.yaml:ro
       # Explicitly list the dashboards we want to show in the demo. We intentionally exclude dashboards that require
       # Kubernetes metrics (eg. resources or networking) and other services not available in the demo (eg. Grafana Loki).
       - ./lgtm-config-mimir/dashboards/mimir-alertmanager.json:/var/lib/grafana/dashboards/mimir-alertmanager.json:ro
@@ -37,32 +37,32 @@ services:
     ports:
       - 9000:3000
 
-    prometheus:
-      image: prom/prometheus:latest
-      command:
-        - --config.file=/etc/prometheus/prometheus.yml
-        - --log.level=error
-        - --storage.tsdb.path=/prometheus
-        - --web.console.libraries=/usr/share/prometheus/console_libraries
-        - --web.console.templates=/usr/share/prometheus/consoles
-      volumes:
-        - ./lgtm-config-mimir/prometheus.yaml:/etc/prometheus/prometheus.yml
-        - ./lgtm-config-mimir/rules/rules.yaml:/etc/prometheus/rules.yaml
-      depends_on:
-        - "mimir-1"
-        - "mimir-2"
-        - "mimir-3"
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --log.level=error
+      - --storage.tsdb.path=/prometheus
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+    volumes:
+      - ./lgtm-config-mimir/prometheus.yaml:/etc/prometheus/prometheus.yml
+      - ./lgtm-config-mimir/rules/rules.yaml:/etc/prometheus/rules.yaml
+    depends_on:
+      - "mimir-1"
+      - "mimir-2"
+      - "mimir-3"
 
-    load-balancer:
-      image: nginx:latest
-      volumes:
-        - ./lgtm-config-mimir/nginx.conf:/etc/nginx/nginx.conf:ro
-      depends_on:
-        - "mimir-1"
-        - "mimir-2"
-        - "mimir-3"
-      ports:
-        - 9009:9009
+  load-balancer:
+    image: nginx:latest
+    volumes:
+      - ./lgtm-config-mimir/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - "mimir-1"
+      - "mimir-2"
+      - "mimir-3"
+    ports:
+      - 9009:9009
 
   mimir-1:
     image: grafana/mimir:latest
