@@ -2,6 +2,7 @@ using Serilog;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Runtime.InteropServices;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,8 +16,15 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClient();
 
-// Create ActivitySource for custom traces
+// Create ActivitySource for custom traces and Meter for custom metrics
 var activitySource = new ActivitySource("LGTM.Stack");
+var meter = new Meter("LGTM.Stack");
+
+// Custom metrics
+var simulationCounter = meter.CreateCounter<int>("lgtm_simulations_total", "count", "Total number of simulations run");
+var operationCounter = meter.CreateCounter<int>("lgtm_operations_total", "count", "Total number of operations performed");
+var errorCounter = meter.CreateCounter<int>("lgtm_errors_total", "count", "Total number of errors encountered");
+var simulationDurationHistogram = meter.CreateHistogram<double>("lgtm_simulation_duration_seconds", "seconds", "Duration of simulations");
 
 builder.Services.AddOpenTelemetry()
     .WithMetrics(metrics =>
@@ -24,7 +32,9 @@ builder.Services.AddOpenTelemetry()
         metrics
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
-            .AddPrometheusExporter();
+            .AddRuntimeInstrumentation()
+            .AddMeter("LGTM.Stack") // Add our custom meter
+            .AddPrometheusExporter(); // Keep for /metrics endpoint
     })
     .WithTracing(tracing =>
     {
@@ -55,18 +65,24 @@ app.MapGet("/simulate", async (HttpClient httpClient) =>
 {
     Log.Information("Starting LGTM simulation");
     
+    var simulationStart = DateTime.UtcNow;
     var simulationResults = new List<string>();
     var random = new Random();
+    
+    // Increment simulation counter
+    simulationCounter.Add(1, new KeyValuePair<string, object?>("endpoint", "simulate"));
     
     try
     {
         // Simulate root endpoint
         Log.Information("Root endpoint accessed");
         simulationResults.Add("✅ Root endpoint simulated");
+        operationCounter.Add(1, new KeyValuePair<string, object?>("operation", "root"));
         
         // Simulate health check with cascading calls
         Log.Information("Health check requested");
         simulationResults.Add("✅ Health check simulated");
+        operationCounter.Add(1, new KeyValuePair<string, object?>("operation", "health"));
         
         if (random.Next(0, 2) == 1)
         {
@@ -75,6 +91,7 @@ app.MapGet("/simulate", async (HttpClient httpClient) =>
             Log.Warning("Test log entry - Warning level"); 
             Log.Error("Test log entry - Error level");
             simulationResults.Add("✅ Test logs generated");
+            operationCounter.Add(1, new KeyValuePair<string, object?>("operation", "test-logs"));
             
             if (random.Next(0, 3) == 1)
             {
@@ -87,6 +104,7 @@ app.MapGet("/simulate", async (HttpClient httpClient) =>
                     var status = response.IsSuccessStatusCode ? "accessible" : "not accessible";
                     Log.Information("Loki status check: {Status}", status);
                     simulationResults.Add($"✅ Loki test completed - Status: {status}");
+                    operationCounter.Add(1, new KeyValuePair<string, object?>("operation", "loki-test"));
                     
                     if (random.Next(0, 4) == 1)
                     {
@@ -96,6 +114,7 @@ app.MapGet("/simulate", async (HttpClient httpClient) =>
                         Log.Warning("This is a warning from the main application");
                         Log.Error("This is an error from the main application");
                         simulationResults.Add("✅ Force logs completed");
+                        operationCounter.Add(1, new KeyValuePair<string, object?>("operation", "force-logs"));
                         
                         if (random.Next(0, 3) == 1)
                         {
@@ -114,6 +133,7 @@ app.MapGet("/simulate", async (HttpClient httpClient) =>
                             
                             Log.Information("Trace test completed successfully");
                             simulationResults.Add($"✅ Trace test completed - Trace ID: {activity?.TraceId}");
+                            operationCounter.Add(1, new KeyValuePair<string, object?>("operation", "trace-test"));
                         }
                     }
                 }
@@ -121,6 +141,7 @@ app.MapGet("/simulate", async (HttpClient httpClient) =>
                 {
                     Log.Error(ex, "Failed to connect to Loki during simulation");
                     simulationResults.Add("❌ Loki test failed");
+                    errorCounter.Add(1, new KeyValuePair<string, object?>("operation", "loki-test"));
                 }
             }
         }
@@ -130,9 +151,14 @@ app.MapGet("/simulate", async (HttpClient httpClient) =>
         {
             Log.Error("Simulated error during LGTM simulation");
             simulationResults.Add("⚠️ Simulated error generated");
+            errorCounter.Add(1, new KeyValuePair<string, object?>("operation", "simulation"));
         }
         
         Log.Information("LGTM simulation completed with {ResultCount} operations", simulationResults.Count);
+        
+        // Record simulation duration
+        var simulationDuration = (DateTime.UtcNow - simulationStart).TotalSeconds;
+        simulationDurationHistogram.Record(simulationDuration);
         
         return Results.Ok(new
         {
@@ -147,6 +173,11 @@ app.MapGet("/simulate", async (HttpClient httpClient) =>
     {
         Log.Error(ex, "Error during LGTM simulation");
         simulationResults.Add($"❌ Simulation error: {ex.Message}");
+        errorCounter.Add(1, new KeyValuePair<string, object?>("operation", "simulation"));
+        
+        // Record simulation duration even on error
+        var simulationDuration = (DateTime.UtcNow - simulationStart).TotalSeconds;
+        simulationDurationHistogram.Record(simulationDuration);
         
         return Results.Ok(new
         {

@@ -16,6 +16,15 @@ scrape_configs:
       - targets: ["lgtm-mimir-2:8080"]
         labels:
           pod: "lgtm-mimir-2"
+  
+  - job_name: demo/lgtm-stack-app
+    static_configs:
+      - targets: ["host.docker.internal:5207"]
+        labels:
+          app: "lgtm-stack"
+          service: "demo-app"
+    metrics_path: /metrics
+    scrape_interval: 5s
 
 remote_write:
   - url: http://load-balancer:9009/api/v1/push
