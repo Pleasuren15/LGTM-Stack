@@ -3,6 +3,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using NBomber.CSharp;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -163,7 +164,7 @@ app.MapGet("/trace-test", async (HttpClient httpClient) =>
 })
 .WithName("TraceTest");
 
-// Auto-open browser to Swagger UI
+// Auto-open browser to Swagger UI and run load tests
 var urls = app.Urls;
 app.Lifetime.ApplicationStarted.Register(() =>
 {
@@ -191,6 +192,66 @@ app.Lifetime.ApplicationStarted.Register(() =>
     {
         Log.Warning("Could not auto-open browser: {Error}", ex.Message);
     }
+    
+    // Start load testing after a short delay
+    Task.Run(async () =>
+    {
+        await Task.Delay(2000); // Wait 2 seconds for the app to fully start
+        await RunLoadTests(url);
+    });
 });
+
+async Task RunLoadTests(string baseUrl)
+{
+    Log.Information("Starting NBomber load tests against {BaseUrl}", baseUrl);
+    
+    // Define scenarios for each endpoint
+    var scenarios = new[]
+    {
+        CreateEndpointScenario("root", $"{baseUrl}/", "Root endpoint load test"),
+        CreateEndpointScenario("health", $"{baseUrl}/health", "Health endpoint load test"),
+        CreateEndpointScenario("test-logs", $"{baseUrl}/test-logs", "Test logs endpoint load test"),
+        CreateEndpointScenario("loki-test", $"{baseUrl}/loki-test", "Loki test endpoint load test"),
+        CreateEndpointScenario("force-logs", $"{baseUrl}/force-logs", "Force logs endpoint load test"),
+        CreateEndpointScenario("trace-test", $"{baseUrl}/trace-test", "Trace test endpoint load test")
+    };
+    
+    try
+    {
+        var scenario = Scenario.Create("api_load_test", async context =>
+        {
+            using var httpClient = new HttpClient();
+            
+            // Randomly select an endpoint
+            var random = new Random();
+            var endpoint = scenarios[random.Next(scenarios.Length)];
+            
+            var response = await httpClient.GetAsync(endpoint.Url);
+            
+            return response.IsSuccessStatusCode ? Response.Ok() : Response.Fail();
+        })
+        .WithLoadSimulations(
+            Simulation.InjectPerSec(rate: 10, during: TimeSpan.FromSeconds(8)) // 10 requests per second for 8 seconds
+        );
+        
+        NBomberRunner
+            .RegisterScenarios(scenario)
+            .WithReportFolder("load-test-reports")
+            .Run();
+            
+        Log.Information("NBomber load tests completed successfully");
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Error running NBomber load tests");
+    }
+}
+
+static EndpointInfo CreateEndpointScenario(string name, string url, string description)
+{
+    return new EndpointInfo { Name = name, Url = url, Description = description };
+}
+
+record EndpointInfo(string Name, string Url, string Description);
 
 await app.RunAsync();
