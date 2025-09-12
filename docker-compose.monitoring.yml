@@ -1,3 +1,5 @@
+# # https://grafana.com/docs/mimir/latest/get-started/play-with-grafana-mimir/#play-with-mimir
+
 networks:
   loki:
 
@@ -130,9 +132,8 @@ services:
     ports:
       - "9090:9090"
     depends_on:
-      - "mimir-1"
-      - "mimir-2"
-      - "mimir-3"
+      - "lgtm-mimir-1"
+      - "lgtm-mimir-2"
     networks:
       - loki
   
@@ -141,47 +142,34 @@ services:
     volumes:
       - ./lgtm-config-mimir/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - "mimir-1"
-      - "mimir-2"
-      - "mimir-3"
+      - "lgtm-mimir-1"
+      - "lgtm-mimir-2"
     ports:
       - 9009:9009
 
-  mimir-1:
+  lgtm-mimir-1:
     image: grafana/mimir:latest
     command: ["-config.file=/etc/mimir.yaml"]
-    hostname: mimir-1
+    hostname: lgtm-mimir-1
     depends_on:
       - minio
     volumes:
       - ./lgtm-config-mimir/mimir.yaml:/etc/mimir.yaml
       - ./lgtm-config-mimir/alertmanager-fallback-config.yaml:/etc/alertmanager-fallback-config.yaml
-      - mimir-1-data:/data
+      - lgtm-mimir-1-data:/data
 
-  mimir-2:
+  lgtm-mimir-2:
     image: grafana/mimir:latest
     command: ["-config.file=/etc/mimir.yaml"]
-    hostname: mimir-2
+    hostname: lgtm-mimir-2
     depends_on:
       - minio
     volumes:
       - ./lgtm-config-mimir/mimir.yaml:/etc/mimir.yaml
       - ./lgtm-config-mimir/alertmanager-fallback-config.yaml:/etc/alertmanager-fallback-config.yaml
-      - mimir-2-data:/data
-
-  mimir-3:
-    image: grafana/mimir:latest
-    command: ["-config.file=/etc/mimir.yaml"]
-    hostname: mimir-3
-    depends_on:
-      - minio
-    volumes:
-      - ./lgtm-config-mimir/mimir.yaml:/etc/mimir.yaml
-      - ./lgtm-config-mimir/alertmanager-fallback-config.yaml:/etc/alertmanager-fallback-config.yaml
-      - mimir-3-data:/data
+      - lgtm-mimir-2-data:/data
 
 volumes:
-  mimir-1-data:
-  mimir-2-data:
-  mimir-3-data:
+  lgtm-mimir-1-data:
+  lgtm-mimir-2-data:
   minio-data:
