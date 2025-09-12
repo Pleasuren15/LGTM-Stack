@@ -51,56 +51,113 @@ app.UseHttpsRedirection();
 app.MapPrometheusScrapingEndpoint();
 
 // Add some sample endpoints to generate logs and metrics
-app.MapGet("/", () => 
+app.MapGet("/", async (HttpClient httpClient) =>
 {
     Log.Information("Root endpoint accessed");
+
+    // Call health endpoint
+    try
+    {
+        var healthResponse = await httpClient.GetAsync("http://localhost:5207/health");
+        Log.Information("Root endpoint called health: {StatusCode}", healthResponse.StatusCode);
+    }
+    catch (Exception ex)
+    {
+        Log.Warning("Root endpoint failed to call health: {Error}", ex.Message);
+    }
+
     return "Hello World! Check your Grafana for logs and metrics.";
 })
 .WithName("GetRoot");
 
-app.MapGet("/health", () => 
+app.MapGet("/health", async (HttpClient httpClient) =>
 {
     Log.Information("Health check requested");
+
+    // Call test-logs endpoint randomly
+    if (Random.Shared.Next(0, 2) == 1)
+    {
+        try
+        {
+            var logsResponse = await httpClient.GetAsync("http://localhost:5207/test-logs");
+            Log.Information("Health endpoint called test-logs: {StatusCode}", logsResponse.StatusCode);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Health endpoint failed to call test-logs: {Error}", ex.Message);
+        }
+    }
+
     return Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow });
 })
 .WithName("GetHealth");
 
-app.MapGet("/error", () => 
+app.MapGet("/error", () =>
 {
     Log.Error("Error endpoint accessed - simulating an error");
     throw new InvalidOperationException("This is a test error for logging");
 })
 .WithName("GetError");
 
-app.MapGet("/test-logs", () => 
+app.MapGet("/test-logs", async (HttpClient httpClient) =>
 {
     Log.Information("Test log entry - Information level");
     Log.Warning("Test log entry - Warning level");
     Log.Error("Test log entry - Error level");
-    
-    return Results.Ok(new { 
-        message = "Test logs generated", 
+
+    // Call loki-test endpoint sometimes
+    if (Random.Shared.Next(0, 3) == 1)
+    {
+        try
+        {
+            var lokiResponse = await httpClient.GetAsync("http://localhost:5207/loki-test");
+            Log.Information("Test-logs endpoint called loki-test: {StatusCode}", lokiResponse.StatusCode);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Test-logs endpoint failed to call loki-test: {Error}", ex.Message);
+        }
+    }
+
+    return Results.Ok(new
+    {
+        message = "Test logs generated",
         timestamp = DateTime.UtcNow,
         levels = new[] { "Information", "Warning", "Error" }
     });
 })
 .WithName("TestLogs");
 
-app.MapGet("/loki-test", async () => 
+app.MapGet("/loki-test", async (HttpClient httpClient) =>
 {
     Log.Information("Testing direct Loki connectivity from application");
-    
+
     using var client = new HttpClient();
-    try 
+    try
     {
         var response = await client.GetAsync("http://localhost:3100/ready");
         var status = response.IsSuccessStatusCode ? "accessible" : "not accessible";
-        
+
         Log.Information("Loki status check: {Status}", status);
-        
-        return Results.Ok(new { 
+
+        // Call force-logs endpoint sometimes
+        if (Random.Shared.Next(0, 4) == 1)
+        {
+            try
+            {
+                var forceResponse = await httpClient.GetAsync("http://localhost:5207/force-logs");
+                Log.Information("Loki-test endpoint called force-logs: {StatusCode}", forceResponse.StatusCode);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("Loki-test endpoint failed to call force-logs: {Error}", ex.Message);
+            }
+        }
+
+        return Results.Ok(new
+        {
             lokiStatus = status,
-            timestamp = DateTime.UtcNow 
+            timestamp = DateTime.UtcNow
         });
     }
     catch (Exception ex)
@@ -111,15 +168,30 @@ app.MapGet("/loki-test", async () =>
 })
 .WithName("LokiTest");
 
-app.MapGet("/force-logs", () => 
+app.MapGet("/force-logs", async (HttpClient httpClient) =>
 {
     LGTM.Stack.TestLogging.TestDirectLokiLogging();
-    
+
     Log.Information("Forced log test completed at {Timestamp}", DateTime.UtcNow);
     Log.Warning("This is a warning from the main application");
     Log.Error("This is an error from the main application");
-    
-    return Results.Ok(new { 
+
+    // Call trace-test endpoint sometimes
+    if (Random.Shared.Next(0, 3) == 1)
+    {
+        try
+        {
+            var traceResponse = await httpClient.GetAsync("http://localhost:5207/trace-test");
+            Log.Information("Force-logs endpoint called trace-test: {StatusCode}", traceResponse.StatusCode);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Force-logs endpoint failed to call trace-test: {Error}", ex.Message);
+        }
+    }
+
+    return Results.Ok(new
+    {
         message = "Direct logging test completed",
         timestamp = DateTime.UtcNow,
         instruction = "Check your Grafana Loki for logs with app=lgtm-stack-test and app=lgtm-stack labels"
@@ -127,26 +199,41 @@ app.MapGet("/force-logs", () =>
 })
 .WithName("ForceLogs");
 
-app.MapGet("/trace-test", async (HttpClient httpClient) => 
+app.MapGet("/trace-test", async (HttpClient httpClient) =>
 {
     using var activity = activitySource.StartActivity("TraceTest");
     activity?.SetTag("test.type", "manual");
     activity?.SetTag("endpoint", "trace-test");
-    
+
     Log.Information("Starting trace test with activity ID: {ActivityId}", activity?.Id);
-    
+
     // Make an HTTP call to generate child spans
-    try 
+    try
     {
         var response = await httpClient.GetAsync("https://api.github.com/zen");
         var content = await response.Content.ReadAsStringAsync();
-        
+
         activity?.SetTag("http.response_size", content.Length);
         activity?.SetStatus(ActivityStatusCode.Ok);
-        
+
         Log.Information("Trace test completed successfully");
-        
-        return Results.Ok(new { 
+
+        // Call root endpoint sometimes to create a cycle
+        if (Random.Shared.Next(0, 5) == 1)
+        {
+            try
+            {
+                var rootResponse = await httpClient.GetAsync("http://localhost:5207/");
+                Log.Information("Trace-test endpoint called root: {StatusCode}", rootResponse.StatusCode);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("Trace-test endpoint failed to call root: {Error}", ex.Message);
+            }
+        }
+
+        return Results.Ok(new
+        {
             message = "Trace test completed",
             traceId = activity?.TraceId.ToString(),
             spanId = activity?.SpanId.ToString(),
@@ -169,95 +256,9 @@ app.Lifetime.ApplicationStarted.Register(() =>
 {
     var url = urls.FirstOrDefault() ?? "https://localhost:5001";
     var swaggerUrl = $"{url}/swagger";
-    
-    Log.Information("Opening browser to Swagger UI at {SwaggerUrl}", swaggerUrl);
-    
-    try
-    {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            Process.Start(new ProcessStartInfo("cmd", $"/c start {swaggerUrl}") { CreateNoWindow = true });
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-        {
-            Process.Start("xdg-open", swaggerUrl);
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-        {
-            Process.Start("open", swaggerUrl);
-        }
-    }
-    catch (Exception ex)
-    {
-        Log.Warning("Could not auto-open browser: {Error}", ex.Message);
-    }
-    
-    // Start load testing after a short delay
-    Task.Run(async () =>
-    {
-        await Task.Delay(2000); // Wait 2 seconds for the app to fully start
-        await RunLoadTests(url);
-    });
-});
 
-async Task RunLoadTests(string baseUrl)
-{
-    Log.Information("Starting simple load tests against {BaseUrl}", baseUrl);
-    
-    var endpoints = new[]
-    {
-        "/",
-        "/health", 
-        "/test-logs",
-        "/loki-test",
-        "/force-logs",
-        "/trace-test"
-    };
-    
-    try
-    {
-        using var httpClient = new HttpClient();
-        httpClient.Timeout = TimeSpan.FromSeconds(10);
-        
-        var tasks = new List<Task>();
-        var random = new Random();
-        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        
-        // Run for 8 seconds with random requests
-        while (stopwatch.Elapsed < TimeSpan.FromSeconds(8))
-        {
-            var endpoint = endpoints[random.Next(endpoints.Length)];
-            var url = $"{baseUrl}{endpoint}";
-            
-            var task = Task.Run(async () =>
-            {
-                try
-                {
-                    var response = await httpClient.GetAsync(url);
-                    Log.Debug("Load test hit {Endpoint}: {StatusCode}", endpoint, response.StatusCode);
-                }
-                catch (Exception ex)
-                {
-                    Log.Warning("Load test request to {Endpoint} failed: {Error}", endpoint, ex.Message);
-                }
-            });
-            
-            tasks.Add(task);
-            
-            // Random delay between 100-500ms
-            await Task.Delay(random.Next(100, 500));
-        }
-        
-        // Wait for all remaining requests to complete
-        await Task.WhenAll(tasks);
-        
-        Log.Information("Load tests completed successfully - sent {RequestCount} requests in {Duration}ms", 
-            tasks.Count, stopwatch.ElapsedMilliseconds);
-    }
-    catch (Exception ex)
-    {
-        Log.Error(ex, "Error running load tests: {Message}", ex.Message);
-    }
-}
+    Log.Information("Opening browser to Swagger UI at {SwaggerUrl}", swaggerUrl);
+    Process.Start(new ProcessStartInfo("cmd", $"/c start {swaggerUrl}") { CreateNoWindow = true });
+});
 
 await app.RunAsync();
