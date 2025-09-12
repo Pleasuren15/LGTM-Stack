@@ -3,9 +3,6 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using NBomber.CSharp;
-using NBomber.Contracts;
-using NBomber.Contracts.Stats;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -205,63 +202,62 @@ app.Lifetime.ApplicationStarted.Register(() =>
 
 async Task RunLoadTests(string baseUrl)
 {
-    Log.Information("Starting NBomber load tests against {BaseUrl}", baseUrl);
+    Log.Information("Starting simple load tests against {BaseUrl}", baseUrl);
     
-    // Define scenarios for each endpoint
-    var scenarios = new[]
+    var endpoints = new[]
     {
-        CreateEndpointScenario("root", $"{baseUrl}/", "Root endpoint load test"),
-        CreateEndpointScenario("health", $"{baseUrl}/health", "Health endpoint load test"),
-        CreateEndpointScenario("test-logs", $"{baseUrl}/test-logs", "Test logs endpoint load test"),
-        CreateEndpointScenario("loki-test", $"{baseUrl}/loki-test", "Loki test endpoint load test"),
-        CreateEndpointScenario("force-logs", $"{baseUrl}/force-logs", "Force logs endpoint load test"),
-        CreateEndpointScenario("trace-test", $"{baseUrl}/trace-test", "Trace test endpoint load test")
+        "/",
+        "/health", 
+        "/test-logs",
+        "/loki-test",
+        "/force-logs",
+        "/trace-test"
     };
     
     try
     {
         using var httpClient = new HttpClient();
+        httpClient.Timeout = TimeSpan.FromSeconds(10);
         
-        var scenario = Scenario.Create("api_load_test", async context =>
+        var tasks = new List<Task>();
+        var random = new Random();
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        
+        // Run for 8 seconds with random requests
+        while (stopwatch.Elapsed < TimeSpan.FromSeconds(8))
         {
-            // Randomly select an endpoint
-            var random = new Random();
-            var endpoint = scenarios[random.Next(scenarios.Length)];
+            var endpoint = endpoints[random.Next(endpoints.Length)];
+            var url = $"{baseUrl}{endpoint}";
             
-            try
+            var task = Task.Run(async () =>
             {
-                var response = await httpClient.GetAsync(endpoint.Url);
-                return response.IsSuccessStatusCode ? Response.Ok() : Response.Fail();
-            }
-            catch (Exception ex)
-            {
-                Log.Warning("Load test request failed: {Error}", ex.Message);
-                return Response.Fail();
-            }
-        })
-        .WithLoadSimulations(
-            Simulation.InjectRandom(minRate: 5, maxRate: 15, interval: TimeSpan.FromSeconds(1), during: TimeSpan.FromSeconds(8))
-        );
+                try
+                {
+                    var response = await httpClient.GetAsync(url);
+                    Log.Debug("Load test hit {Endpoint}: {StatusCode}", endpoint, response.StatusCode);
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning("Load test request to {Endpoint} failed: {Error}", endpoint, ex.Message);
+                }
+            });
+            
+            tasks.Add(task);
+            
+            // Random delay between 100-500ms
+            await Task.Delay(random.Next(100, 500));
+        }
         
-        NBomberRunner
-            .RegisterScenarios(scenario)
-            .WithReportFolder("load-test-reports")
-            .WithReportFormats(ReportFormat.Txt, ReportFormat.Html)
-            .Run();
-            
-        Log.Information("NBomber load tests completed successfully");
+        // Wait for all remaining requests to complete
+        await Task.WhenAll(tasks);
+        
+        Log.Information("Load tests completed successfully - sent {RequestCount} requests in {Duration}ms", 
+            tasks.Count, stopwatch.ElapsedMilliseconds);
     }
     catch (Exception ex)
     {
-        Log.Error(ex, "Error running NBomber load tests");
+        Log.Error(ex, "Error running load tests: {Message}", ex.Message);
     }
 }
 
 await app.RunAsync();
-
-static EndpointInfo CreateEndpointScenario(string name, string url, string description)
-{
-    return new EndpointInfo(name, url, description);
-}
-
-record EndpointInfo(string Name, string Url, string Description);

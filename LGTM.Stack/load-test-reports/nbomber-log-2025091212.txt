@@ -1,0 +1,14 @@
+2025-09-12 12:05:01.588 +02:00 [INF] [ThreadId:9] NBomber 6.0.0 started a new session: 2025-09-12_10.05.38_session_9a93ad10
+2025-09-12 12:05:01.771 +02:00 [INF] [ThreadId:9] NBomber started as single node
+2025-09-12 12:05:01.778 +02:00 [INF] [ThreadId:9] License validation....
+2025-09-12 12:05:01.780 +02:00 [WRN] [ThreadId:9] THIS VERSION IS FREE ONLY FOR PERSONAL USE. You can't use it for an organization.
+2025-09-12 12:05:02.076 +02:00 [INF] [ThreadId:9] Reports folder: C:\Dev\Learning\LGTM-Stack\LGTM.Stack\bin\Debug\net9.0\load-test-reports
+2025-09-12 12:05:02.077 +02:00 [INF] [ThreadId:9] Plugins: no plugins were loaded
+2025-09-12 12:05:02.079 +02:00 [INF] [ThreadId:9] Reporting sinks: no reporting sinks were loaded
+2025-09-12 12:05:02.079 +02:00 [INF] [ThreadId:9] Starting init...
+2025-09-12 12:05:02.103 +02:00 [INF] [ThreadId:9] Target scenarios: simple_load_test
+2025-09-12 12:05:02.109 +02:00 [INF] [ThreadId:9] Init finished
+2025-09-12 12:05:02.141 +02:00 [INF] [ThreadId:9] Starting warm up...
+2025-09-12 12:05:02.144 +02:00 [INF] [ThreadId:9] Warm up for scenarios: simple_load_test
+2025-09-12 12:05:02.155 +02:00 [INF] [ThreadId:9] Warm up duration: 00:00:00
+2025-09-12 12:05:02.185 +02:00 [INF] [ThreadId:9] Stopping scenarios...

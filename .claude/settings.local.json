@@ -9,7 +9,13 @@
       "Bash(dotnet build LGTM.Stack/LGTM.Stack.csproj)",
       "Bash(docker compose -f docker-compose.monitoring.yml down)",
       "Bash(docker compose -f docker-compose.monitoring.yml up -d)",
-      "Bash(docker logs lgtm-stack-lgtm-tempo-1 --tail 10)"
+      "Bash(docker logs lgtm-stack-lgtm-tempo-1 --tail 10)",
+      "Bash(dotnet run)",
+      "Bash(whereis dotnet)",
+      "Bash(find /usr -name \"dotnet\")",
+      "Bash(find /opt -name \"dotnet\")",
+      "Bash(ls -la /mnt/c/Program Files/dotnet/)",
+      "Bash(/mnt/c/Program Files/dotnet/dotnet.exe run)"
     ],
     "deny": []
   }
