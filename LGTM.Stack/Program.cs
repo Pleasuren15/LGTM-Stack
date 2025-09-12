@@ -4,6 +4,8 @@ using OpenTelemetry.Trace;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using NBomber.CSharp;
+using NBomber.Contracts;
+using NBomber.Contracts.Stats;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -218,25 +220,33 @@ async Task RunLoadTests(string baseUrl)
     
     try
     {
+        using var httpClient = new HttpClient();
+        
         var scenario = Scenario.Create("api_load_test", async context =>
         {
-            using var httpClient = new HttpClient();
-            
             // Randomly select an endpoint
             var random = new Random();
             var endpoint = scenarios[random.Next(scenarios.Length)];
             
-            var response = await httpClient.GetAsync(endpoint.Url);
-            
-            return response.IsSuccessStatusCode ? Response.Ok() : Response.Fail();
+            try
+            {
+                var response = await httpClient.GetAsync(endpoint.Url);
+                return response.IsSuccessStatusCode ? Response.Ok() : Response.Fail();
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("Load test request failed: {Error}", ex.Message);
+                return Response.Fail();
+            }
         })
         .WithLoadSimulations(
-            Simulation.InjectPerSec(rate: 10, during: TimeSpan.FromSeconds(8)) // 10 requests per second for 8 seconds
+            Simulation.InjectRandom(minRate: 5, maxRate: 15, interval: TimeSpan.FromSeconds(1), during: TimeSpan.FromSeconds(8))
         );
         
         NBomberRunner
             .RegisterScenarios(scenario)
             .WithReportFolder("load-test-reports")
+            .WithReportFormats(ReportFormat.Txt, ReportFormat.Html)
             .Run();
             
         Log.Information("NBomber load tests completed successfully");
@@ -247,11 +257,11 @@ async Task RunLoadTests(string baseUrl)
     }
 }
 
+await app.RunAsync();
+
 static EndpointInfo CreateEndpointScenario(string name, string url, string description)
 {
-    return new EndpointInfo { Name = name, Url = url, Description = description };
+    return new EndpointInfo(name, url, description);
 }
 
 record EndpointInfo(string Name, string Url, string Description);
-
-await app.RunAsync();
