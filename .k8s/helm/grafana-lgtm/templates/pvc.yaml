@@ -1,0 +1,49 @@
+{{- if .Values.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "grafana-lgtm.fullname" . }}-grafana
+  labels:
+    {{- include "grafana-lgtm.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.grafana.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.grafana.size }}
+  {{- if .Values.persistence.grafana.storageClass }}
+  storageClassName: {{ .Values.persistence.grafana.storageClass }}
+  {{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "grafana-lgtm.fullname" . }}-loki
+  labels:
+    {{- include "grafana-lgtm.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.loki.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.loki.size }}
+  {{- if .Values.persistence.loki.storageClass }}
+  storageClassName: {{ .Values.persistence.loki.storageClass }}
+  {{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "grafana-lgtm.fullname" . }}-prometheus
+  labels:
+    {{- include "grafana-lgtm.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.prometheus.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.prometheus.size }}
+  {{- if .Values.persistence.prometheus.storageClass }}
+  storageClassName: {{ .Values.persistence.prometheus.storageClass }}
+  {{- end }}
+{{- end }}

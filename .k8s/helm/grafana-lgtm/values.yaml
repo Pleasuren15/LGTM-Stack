@@ -1,0 +1,136 @@
+# Grafana LGTM Stack configuration
+image:
+  repository: grafana/otel-lgtm
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# Replica count
+replicaCount: 1
+
+# Resources
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "200m"
+  limits:
+    memory: "1Gi"
+    cpu: "500m"
+
+# Service configuration
+service:
+  type: ClusterIP
+  ports:
+    grafana:
+      port: 3000
+      targetPort: 3000
+      name: grafana
+    otlp-grpc:
+      port: 4317
+      targetPort: 4317
+      name: otlp-grpc
+    otlp-http:
+      port: 4318
+      targetPort: 4318
+      name: otlp-http
+
+# Grafana LGTM configuration
+grafana:
+  # Grafana plugins to install
+  plugins: "https://storage.googleapis.com/integration-artifacts/grafana-lokiexplore-app/grafana-lokiexplore-app-latest.zip;grafana-lokiexplore-app"
+  
+# OpenTelemetry configuration  
+otel:
+  # Improve metric export interval for dev/test
+  metricExportInterval: "5000"
+
+command: ["/bin/sh"]
+args: 
+  - "-c" 
+  - "update-ca-trust && /otel-lgtm/run-all.sh"
+
+# Environment variables
+env:
+  - name: GF_INSTALL_PLUGINS
+    value: "https://storage.googleapis.com/integration-artifacts/grafana-lokiexplore-app/grafana-lokiexplore-app-latest.zip;grafana-lokiexplore-app"
+  - name: OTEL_METRIC_EXPORT_INTERVAL
+    value: "5000"
+
+# Health checks  
+healthCheck:
+  enabled: true
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: grafana
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /healthz
+      port: grafana
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 5
+    failureThreshold: 20
+  startupProbe:
+    httpGet:
+      path: /healthz
+      port: grafana
+    initialDelaySeconds: 2
+    periodSeconds: 3
+    timeoutSeconds: 5
+    failureThreshold: 20
+
+# Security context - Grafana LGTM may need root for initial setup
+securityContext:
+  runAsNonRoot: false
+  runAsUser: 0
+  allowPrivilegeEscalation: true
+  readOnlyRootFilesystem: false
+
+podSecurityContext:
+  runAsUser: 0
+  runAsGroup: 0
+  fsGroup: 0
+
+# Network policy
+networkPolicy:
+  enabled: false
+
+# Service monitor for observability
+serviceMonitor:
+  enabled: false
+  labels:
+    environment: local
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  hosts:
+    - host: grafana.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Persistence configuration for data volumes
+persistence:
+  enabled: true
+  grafana:
+    size: 1Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+  loki:
+    size: 2Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+  prometheus:
+    size: 2Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce

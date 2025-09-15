@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "grafana-lgtm.fullname" . }}
+  labels:
+    {{- include "grafana-lgtm.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "grafana-lgtm.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "grafana-lgtm.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        {{- with .Values.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- if .Values.command }}
+        command:
+          {{- toYaml .Values.command | nindent 10 }}
+        {{- end }}
+        {{- if .Values.args }}
+        args:
+          {{- toYaml .Values.args | nindent 10 }}
+        {{- end }}
+        ports:
+        - name: grafana
+          containerPort: 3000
+          protocol: TCP
+        - name: otlp-grpc
+          containerPort: 4317
+          protocol: TCP
+        - name: otlp-http
+          containerPort: 4318
+          protocol: TCP
+        env:
+        {{- range .Values.env }}
+        - name: {{ .name }}
+          value: {{ .value | quote }}
+        {{- end }}
+        {{- if .Values.healthCheck.enabled }}
+        livenessProbe:
+          {{- toYaml .Values.healthCheck.livenessProbe | nindent 10 }}
+        readinessProbe:
+          {{- toYaml .Values.healthCheck.readinessProbe | nindent 10 }}
+        {{- if .Values.healthCheck.startupProbe }}
+        startupProbe:
+          {{- toYaml .Values.healthCheck.startupProbe | nindent 10 }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.persistence.enabled }}
+        volumeMounts:
+        - name: grafana-data
+          mountPath: /data/grafana
+        - name: loki-data
+          mountPath: /loki
+        - name: prometheus-data
+          mountPath: /data/prometheus
+        {{- end }}
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+      {{- if .Values.persistence.enabled }}
+      volumes:
+      - name: grafana-data
+        persistentVolumeClaim:
+          claimName: {{ include "grafana-lgtm.fullname" . }}-grafana
+      - name: loki-data
+        persistentVolumeClaim:
+          claimName: {{ include "grafana-lgtm.fullname" . }}-loki
+      - name: prometheus-data
+        persistentVolumeClaim:
+          claimName: {{ include "grafana-lgtm.fullname" . }}-prometheus
+      {{- end }}

@@ -1,0 +1,14 @@
+apiVersion: v2
+name: grafana-lgtm
+description: Grafana Labs LGTM stack (Loki, Grafana, Tempo, Mimir) for observability
+type: application
+version: 1.0.0
+appVersion: "latest"
+keywords:
+  - grafana
+  - loki
+  - tempo
+  - mimir
+  - observability
+  - monitoring
+  - otel
