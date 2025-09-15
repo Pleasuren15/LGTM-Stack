@@ -1,0 +1,92 @@
+# LGTM Stack Application configuration
+image:
+  repository: lgtm-stack
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# Replica count
+replicaCount: 1
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+# Resources
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "250m"
+
+# Environment variables
+env:
+  ASPNETCORE_ENVIRONMENT: "Production"
+  ASPNETCORE_URLS: "http://+:8080"
+
+# Application configuration
+app:
+  # Loki endpoint for logging
+  lokiEndpoint: "http://grafana-lgtm:3100"
+  
+  # OpenTelemetry OTLP endpoint
+  otlpEndpoint: "http://grafana-lgtm:4318"
+  
+  # Application labels for Loki
+  labels:
+    app: "lgtm-stack"
+    environment: "production"
+
+# Health checks
+healthCheck:
+  enabled: true
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+
+podSecurityContext:
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  hosts:
+    - host: lgtm-stack.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Service monitor for Prometheus scraping
+serviceMonitor:
+  enabled: false
+  labels:
+    environment: production

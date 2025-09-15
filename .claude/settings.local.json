@@ -15,7 +15,9 @@
       "Bash(find /usr -name \"dotnet\")",
       "Bash(find /opt -name \"dotnet\")",
       "Bash(ls -la /mnt/c/Program Files/dotnet/)",
-      "Bash(/mnt/c/Program Files/dotnet/dotnet.exe run)"
+      "Bash(/mnt/c/Program Files/dotnet/dotnet.exe run)",
+      "Bash(mkdir -p /mnt/c/Dev/Learning/LGTM-Stack/.k8s/helm/lgtm-stack)",
+      "Bash(mkdir -p /mnt/c/Dev/Learning/LGTM-Stack/.k8s/helm/lgtm-stack/templates)"
     ],
     "deny": []
   }

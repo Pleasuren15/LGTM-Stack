@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "lgtm-stack.fullname" . }}-config
+  labels:
+    {{- include "lgtm-stack.labels" . | nindent 4 }}
+data:
+  appsettings.Production.json: |
+    {
+      "Logging": {
+        "LogLevel": {
+          "Default": "Information",
+          "Microsoft.AspNetCore": "Warning"
+        }
+      },
+      "AllowedHosts": "*",
+      "Serilog": {
+        "Using": [ "Serilog.Sinks.Console", "Serilog.Sinks.Grafana.Loki" ],
+        "MinimumLevel": {
+          "Default": "Information",
+          "Override": {
+            "Microsoft": "Warning",
+            "System": "Warning"
+          }
+        },
+        "WriteTo": [
+          {
+            "Name": "Console",
+            "Args": {
+              "outputTemplate": "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}"
+            }
+          },
+          {
+            "Name": "GrafanaLoki",
+            "Args": {
+              "uri": "{{ .Values.app.lokiEndpoint }}",
+              "labels": [
+                {
+                  "key": "app",
+                  "value": "{{ .Values.app.labels.app }}"
+                },
+                {
+                  "key": "environment", 
+                  "value": "{{ .Values.app.labels.environment }}"
+                }
+              ],
+              "propertiesAsLabels": ["Level"],
+              "textFormatter": "Serilog.Formatting.Json.JsonFormatter, Serilog"
+            }
+          }
+        ],
+        "Enrich": [ "FromLogContext", "WithMachineName", "WithThreadId" ]
+      }
+    }
