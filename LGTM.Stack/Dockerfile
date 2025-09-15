@@ -3,6 +3,10 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
 EXPOSE 8080
 
+RUN apk add --no-cache ca-certificates gcompat libc6-compat
+COPY ["certs/nscacert.pem", "/usr/local/share/ca-certificates/netskope.crt"]
+RUN update-ca-certificates
+
 # Use the official .NET 9 SDK for building
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
