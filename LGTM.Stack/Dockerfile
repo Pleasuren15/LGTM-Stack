@@ -13,9 +13,8 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Install certificate in build stage
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
-COPY ["nscacert.pem", "/usr/local/share/ca-certificates/netskope.crt"]
-RUN update-ca-certificates
+# Install certificate in build stage
+# Install certificate in build stage
 
 COPY ["LGTM.Stack/LGTM.Stack.csproj", "LGTM.Stack/"]
 RUN dotnet restore "LGTM.Stack/LGTM.Stack.csproj"
