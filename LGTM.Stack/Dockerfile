@@ -3,14 +3,20 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
 EXPOSE 8080
 
-RUN apk add --no-cache ca-certificates gcompat libc6-compat
-COPY ["certs/nscacert.pem", "/usr/local/share/ca-certificates/netskope.crt"]
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY ["nscacert.pem", "/usr/local/share/ca-certificates/netskope.crt"]
 RUN update-ca-certificates
 
 # Use the official .NET 9 SDK for building
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+
+# Install certificate in build stage
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY ["nscacert.pem", "/usr/local/share/ca-certificates/netskope.crt"]
+RUN update-ca-certificates
+
 COPY ["LGTM.Stack/LGTM.Stack.csproj", "LGTM.Stack/"]
 RUN dotnet restore "LGTM.Stack/LGTM.Stack.csproj"
 COPY . .
