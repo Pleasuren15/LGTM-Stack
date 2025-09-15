@@ -32,6 +32,10 @@ service:
       port: 4318
       targetPort: 4318
       name: otlp-http
+    loki:
+      port: 3100
+      targetPort: 3100
+      name: loki
 
 # Grafana LGTM configuration
 grafana:
