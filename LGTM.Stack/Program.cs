@@ -44,7 +44,8 @@ builder.Services.AddOpenTelemetry()
             .AddSource("LGTM.Stack")
             .AddOtlpExporter(options =>
             {
-                options.Endpoint = new Uri("http://localhost:4317");
+                var otlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? "http://localhost:4317";
+                options.Endpoint = new Uri(otlpEndpoint);
                 options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
             });
     });

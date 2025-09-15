@@ -32,8 +32,8 @@ app:
   # Loki endpoint for logging
   lokiEndpoint: "http://grafana-lgtm:3100"
   
-  # OpenTelemetry OTLP endpoint
-  otlpEndpoint: "http://grafana-lgtm:4318"
+  # OpenTelemetry OTLP endpoint (gRPC)
+  otlpEndpoint: "http://grafana-lgtm:4317"
   
   # Application labels for Loki
   labels:
